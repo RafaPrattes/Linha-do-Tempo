@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Linha do Tempo dos Atos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+  h1 { text-align: center; color: #0077cc; }
+  #filter { margin-bottom: 20px; padding: 5px; }
+  #timeline-container { 
+    overflow-x: auto; 
+    white-space: nowrap; 
+    padding: 20px 0; 
+  }
+  .timeline-item {
+    display: inline-block;
+    vertical-align: top;
+    width: 250px;
+    margin: 0 10px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    cursor: pointer;
+    outline: none;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+  }
+  .timeline-item time { 
+    color: #555; 
+    display: block; 
+    margin-bottom: 10px; 
+    text-align: center;
+    font-weight: bold;
+  }
+  .timeline-item:hover,
+  .timeline-item.active {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    border: 2px solid #0077cc;
+  }
+  .timeline-item:focus {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    border: 2px solid #0077cc;
+  }
+  .timeline-item h3 { margin: 0 0 5px; font-size: 16px; }
+  .timeline-item a { color: #0077cc; text-decoration: none; display: block; margin-bottom: 5px; }
+  .timeline-item a:hover, .timeline-item:focus { text-decoration: underline; }
+  #pdf-viewer { 
+    margin-top: 30px; 
+    width: 100%; 
+    height: 600px; 
+    border: 1px solid #ccc; 
+  }
+</style>
+</head>
+<body>
+
+<h1>Linha do Tempo dos Atos</h1>
+
+<label for="filter">Filtrar por ano:</label>
+<select id="filter">
+  <option value="all">Todos os anos</option>
+</select>
+
+<div id="timeline-container" role="list"></div>
+
+<iframe id="pdf-viewer" title="Visualizador de documentos em PDF" aria-live="polite"></iframe>
+
+<script>
+const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vStfJRo2RfkA5NDHuNnf3I_YVSJQjD6eAXSxkII5WTm34IHdGmizxJbdelVhrcaeTfQ7KlfqqiqOJDR/pub?output=csv";
+let timelineData = [];
+
+function parseDate(dateStr) {
+  if (!dateStr) return new Date(NaN);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return new Date(dateStr);
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    return new Date(year, month, day);
+  }
+  return new Date(dateStr);
+}
+
+function createTimelineItem(row) {
+  const pdfLink = row[0] || "#";
+  const dataAto = row[1] || "Data não informada";
+  const nomeAto = row[2] || "Sem título";
+  const juslaboris = row[3] || "#";
+
+  let parsedDate = parseDate(dataAto);
+  let year = !isNaN(parsedDate.getTime()) ? parsedDate.getFullYear() : "desconhecido";
+
+  const item = document.createElement("div");
+  item.className = "timeline-item";
+  item.dataset.year = year;
+  item.setAttribute("role", "button");
+  item.tabIndex = 0;
+  item.setAttribute("aria-label", "Abrir Documento do ${nomeAto}, datado de ${dataAto}");
+
+  item.innerHTML = `
+    <time>${dataAto}</time>
+    <a href="${pdfLink}" target="_blank">📄 ${nomeAto}</a>
+    <a href="${juslaboris}" target="_blank">⚖ Juslaboris do ${nomeAto}</a>
+  `;
+
+  function openPDF() {
+    document.querySelectorAll(".timeline-item").forEach(i => i.classList.remove("active"));
+    item.classList.add("active");
+    document.getElementById("pdf-viewer").src = pdfLink;
+  }
+
+  item.addEventListener("click", openPDF);
+
+  item.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      openPDF();
+      window.open(pdfLink, "_blank"); // só Enter abre nova aba
+    }
+    if (e.key === " ") { // Espaço apenas abre no iframe
+      e.preventDefault();
+      openPDF();
+    }
+  });
+
+  return item;
+}
+
+Papa.parse(url, {
+  download: true,
+  header: false,
+  complete: function(results) {
+    const data = results.data;
+    timelineData = data.slice(1).filter(r => r.some(cell => cell.trim() !== ""));
+    const container = document.getElementById("timeline-container");
+    timelineData.forEach(row => container.appendChild(createTimelineItem(row)));
+
+    const years = [...new Set(
+      timelineData.map(r => {
+        let d = parseDate(r[1]);
+        return !isNaN(d.getTime()) ? d.getFullYear() : null;
+      }).filter(Boolean)
+    )].sort();
+
+    const filter = document.getElementById("filter");
+    years.forEach(y => {
+      const option = document.createElement("option");
+      option.value = y;
+      option.textContent = y;
+      filter.appendChild(option);
+    });
+  }
+});
+
+document.getElementById("filter").addEventListener("change", (e) => {
+  const year = e.target.value;
+  const container = document.getElementById("timeline-container");
+  container.innerHTML = "";
+  timelineData.forEach(row => {
+    let d = parseDate(row[1]);
+    let rowYear = !isNaN(d.getTime()) ? d.getFullYear() : "desconhecido";
+    if (year === "all" || rowYear == year) {
+      container.appendChild(createTimelineItem(row));
+    }
+  });
+  document.getElementById("pdf-viewer").src = "";
+});
+</script>
+
+</body>
+</html>
