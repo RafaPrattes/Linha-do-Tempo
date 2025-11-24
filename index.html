@@ -2,60 +2,158 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Linha do Tempo dos Atos</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 <style>
-  body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
-  h1 { text-align: center; color: #0077cc; }
-  #filter { margin-bottom: 20px; padding: 5px; }
+  :root {
+    --primary-color: #0077cc;
+    --bg-color: #f5f5f5;
+    --card-bg: #ffffff;
+    --text-color: #333;
+    --text-muted: #666;
+    --focus-color: #ff9900;
+  }
+
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); margin: 0; padding: 20px; color: var(--text-color); }
+  
+  h1 { text-align: center; color: var(--primary-color); margin-bottom: 30px; }
+  
+  /* Controles de Filtro */
+  .controls { text-align: center; margin-bottom: 20px; }
+  select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 16px; }
+
+  /* Container da Linha do Tempo */
   #timeline-container { 
+    display: flex;
     overflow-x: auto; 
-    white-space: nowrap; 
-    padding: 20px 0; 
+    padding: 20px 10px; 
+    gap: 20px;
+    scroll-behavior: smooth;
+    align-items: stretch;
   }
+
+  /* Scrollbar personalizada */
+  #timeline-container::-webkit-scrollbar { height: 8px; }
+  #timeline-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+  #timeline-container::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+
+  /* --- O CARD --- */
   .timeline-item {
-    display: inline-block;
-    vertical-align: top;
-    width: 250px;
-    margin: 0 10px;
-    padding: 15px;
-    background: #fff;
-    border-radius: 6px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    cursor: pointer;
-    outline: none;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-    box-sizing: border-box;
-    transition: all 0.2s ease;
+    flex: 0 0 280px; /* Largura fixa */
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden;
   }
-  .timeline-item time { 
-    color: #555; 
-    display: block; 
-    margin-bottom: 10px; 
-    text-align: center;
+
+  .timeline-item:hover, .timeline-item.active {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    border-color: var(--primary-color);
+  }
+
+  .timeline-item.active { background-color: #eef7ff; }
+
+  /* Estrutura interna do Card */
+  .card-header {
+    padding: 15px 15px 5px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .card-body {
+    padding: 5px 15px 15px;
+    flex-grow: 1;
+  }
+
+  /* Título como Botão (Acessibilidade) */
+  .btn-title {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    font-size: 1.1rem;
+    color: var(--primary-color);
     font-weight: bold;
+    cursor: pointer;
+    text-align: left;
+    line-height: 1.4;
+    width: 100%;
   }
-  .timeline-item:hover,
-  .timeline-item.active {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    border: 2px solid #0077cc;
+  .btn-title:hover { text-decoration: underline; }
+
+  /* --- RODAPÉ COM ÍCONES E TEXTO --- */
+  .card-footer {
+    background: #fafafa;
+    padding: 12px 5px;
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    border-top: 1px solid #eee;
   }
-  .timeline-item:focus {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    border: 2px solid #0077cc;
+
+  .action-btn {
+    display: flex;
+    flex-direction: column; /* Empilha ícone em cima, texto embaixo */
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--text-muted);
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+    min-width: 60px;
+    padding: 4px;
+    border-radius: 6px;
   }
-  .timeline-item h3 { margin: 0 0 5px; font-size: 16px; }
-  .timeline-item a { color: #0077cc; text-decoration: none; display: block; margin-bottom: 5px; }
-  .timeline-item a:hover, .timeline-item:focus { text-decoration: underline; }
+
+  .btn-icon {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+    line-height: 1;
+  }
+
+  .btn-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .action-btn:hover { 
+    color: var(--primary-color); 
+    background-color: rgba(0, 119, 204, 0.05);
+  }
+  
+  /* Foco Acessível */
+  button:focus-visible, a:focus-visible, select:focus-visible {
+    outline: 3px solid var(--focus-color);
+    outline-offset: 2px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    z-index: 1;
+  }
+
+  /* Visualizador PDF */
   #pdf-viewer { 
     margin-top: 30px; 
     width: 100%; 
-    height: 600px; 
-    border: 1px solid #ccc; 
+    height: 700px; 
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    background: #fff;
   }
 </style>
 </head>
@@ -63,18 +161,29 @@
 
 <h1>Linha do Tempo dos Atos</h1>
 
-<label for="filter">Filtrar por ano:</label>
-<select id="filter">
-  <option value="all">Todos os anos</option>
-</select>
+<div class="controls">
+  <label for="filter">Filtrar por ano:</label>
+  <select id="filter">
+    <option value="all">Todos os anos</option>
+  </select>
+</div>
 
-<div id="timeline-container" role="list"></div>
+<div id="timeline-container" role="list" aria-label="Lista de Atos Normativos"></div>
 
-<iframe id="pdf-viewer" title="Visualizador de documentos em PDF" aria-live="polite"></iframe>
+<iframe id="pdf-viewer" title="Visualizador de documentos" aria-hidden="true"></iframe>
 
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vStfJRo2RfkA5NDHuNnf3I_YVSJQjD6eAXSxkII5WTm34IHdGmizxJbdelVhrcaeTfQ7KlfqqiqOJDR/pub?output=csv";
+
 let timelineData = [];
+
+// Helper para criar elementos seguros (Sanitização)
+function createElement(tag, className, textContent) {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (textContent) el.textContent = textContent;
+  return el;
+}
 
 function parseDate(dateStr) {
   if (!dateStr) return new Date(NaN);
@@ -90,48 +199,126 @@ function parseDate(dateStr) {
 }
 
 function createTimelineItem(row) {
-  const pdfLink = row[0] || "#";
+
+   console.log("Lendo linha:", row); 
+
+  // 1. Tratamento de Dados Mais Robusto (Trim remove espaços vazios nas pontas)
+  const rawPdf = row[0] ? row[0].trim() : "";
   const dataAto = row[1] || "Data não informada";
   const nomeAto = row[2] || "Sem título";
-  const juslaboris = row[3] || "#";
+  const rawJus = row[3] ? row[3].trim() : "";
+
+  // Define se os links são válidos
+  // Um link é válido se não for vazio E não for apenas "#"
+  const hasPdf = rawPdf !== "" && rawPdf !== "#";
+  const hasJus = rawJus !== "" && rawJus !== "#";
+
+  // Usa os links limpos ou "#" se inválido
+  const pdfLink = hasPdf ? rawPdf : "#";
+  const juslaboris = hasJus ? rawJus : "#";
 
   let parsedDate = parseDate(dataAto);
   let year = !isNaN(parsedDate.getTime()) ? parsedDate.getFullYear() : "desconhecido";
 
-  const item = document.createElement("div");
-  item.className = "timeline-item";
-  item.dataset.year = year;
-  item.setAttribute("role", "button");
-  item.tabIndex = 0;
-  item.setAttribute("aria-label", "Abrir Documento do ${nomeAto}, datado de ${dataAto}");
+  const card = createElement('div', 'timeline-item');
+  card.dataset.year = year;
+  card.setAttribute("role", "listitem");
 
-  item.innerHTML = `
-    <time>${dataAto}</time>
-    <a href="${pdfLink}" target="_blank">📄 ${nomeAto}</a>
-    <a href="${juslaboris}" target="_blank">⚖ Juslaboris do ${nomeAto}</a>
-  `;
+  // Cabeçalho
+  const header = createElement('div', 'card-header', dataAto);
+  
+  // Corpo (Título)
+  const body = createElement('div', 'card-body');
+  const btnTitle = createElement('button', 'btn-title', nomeAto);
+  
+  // LÓGICA: Se não tem PDF, o título não pode ser clicável para abrir preview
+  if (!hasPdf) {
+    btnTitle.style.cursor = "default";
+    btnTitle.style.textDecoration = "none"; // Remove sublinhado de link
+    btnTitle.style.color = "#555"; // Cor de texto comum
+    btnTitle.setAttribute("aria-disabled", "true");
+    btnTitle.title = "Documento não disponível para visualização";
+  } else {
+    btnTitle.setAttribute('aria-label', `Visualizar documento: ${nomeAto}`);
+  }
+  body.appendChild(btnTitle);
 
-  function openPDF() {
-    document.querySelectorAll(".timeline-item").forEach(i => i.classList.remove("active"));
-    item.classList.add("active");
-    document.getElementById("pdf-viewer").src = pdfLink;
+  // Rodapé
+  const footer = createElement('div', 'card-footer');
+
+  // --- FÁBRICA DE BOTÕES INTELIGENTE ---
+  // Agora aceita um parâmetro extra: 'isValid'
+  function createIconBtn(icon, label, titleAttr, linkUrl, isValid, isActionBtn = false) {
+    // Se for inválido, criamos um botão desabilitado. Se válido, depende do tipo.
+    // Botões de ação (Visualizar) são sempre <button>. Links externos são <a>.
+    const tag = (isValid && !isActionBtn) ? 'a' : 'button';
+    const btn = document.createElement(tag);
+    
+    btn.className = 'action-btn';
+    
+    // Conteúdo visual (Ícone + Texto)
+    btn.innerHTML = `
+      <span class="btn-icon" aria-hidden="true">${icon}</span>
+      <span class="btn-label">${label}</span>
+    `;
+
+    if (!isValid) {
+      // ESTILO DESABILITADO
+      btn.removeAttribute("href");
+      btn.style.opacity = "0.3"; // Bem clarinho
+      btn.style.cursor = "not-allowed"; // 🚫
+      btn.title = `${label} indisponível`;
+      btn.setAttribute("aria-disabled", "true");
+      btn.setAttribute("disabled", ""); // Atributo HTML nativo para buttons
+    } else {
+      // ESTILO HABILITADO
+      btn.title = titleAttr;
+      if (!isActionBtn) {
+        btn.href = linkUrl;
+        btn.target = "_blank";
+      }
+    }
+    return btn;
   }
 
-  item.addEventListener("click", openPDF);
+  // 1. Botão Visualizar (Só funciona se hasPdf for true)
+  const btnView = createIconBtn('👁️', 'Visualizar', 'Ver documento aqui', null, hasPdf, true);
+  
+  // 2. Botão Baixar (Só funciona se hasPdf for true)
+  const btnPdf = createIconBtn('📄', 'Baixar', 'Abrir PDF em nova aba', pdfLink, hasPdf, false);
 
-  item.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      openPDF();
-      window.open(pdfLink, "_blank"); // só Enter abre nova aba
-    }
-    if (e.key === " ") { // Espaço apenas abre no iframe
-      e.preventDefault();
-      openPDF();
-    }
-  });
+  // 3. Botão Juslaboris (Só funciona se hasJus for true)
+  const btnJus = createIconBtn('⚖️', 'Juslaboris', 'Link oficial Juslaboris', juslaboris, hasJus, false);
 
-  return item;
+  footer.append(btnView, btnPdf, btnJus);
+  card.append(header, body, footer);
+
+  // --- LÓGICA DE INTERAÇÃO ---
+  function openPreview(e) {
+    if(e) e.preventDefault();
+    
+    // Se não tem PDF, a função nem roda (segurança extra)
+    if (!hasPdf) return;
+
+    document.querySelectorAll(".timeline-item").forEach(i => {
+      i.classList.remove("active");
+      i.removeAttribute("aria-current");
+    });
+    card.classList.add("active");
+    card.setAttribute("aria-current", "true");
+    
+    const viewer = document.getElementById("pdf-viewer");
+    viewer.src = pdfLink;
+    viewer.setAttribute("aria-hidden", "false");
+  }
+
+  // Só adiciona o evento de clique SE tiver PDF
+  if (hasPdf) {
+    btnTitle.addEventListener("click", openPreview);
+    btnView.addEventListener("click", openPreview);
+  }
+
+  return card;
 }
 
 Papa.parse(url, {
@@ -140,37 +327,66 @@ Papa.parse(url, {
   complete: function(results) {
     const data = results.data;
     timelineData = data.slice(1).filter(r => r.some(cell => cell.trim() !== ""));
-    const container = document.getElementById("timeline-container");
-    timelineData.forEach(row => container.appendChild(createTimelineItem(row)));
-
-    const years = [...new Set(
-      timelineData.map(r => {
-        let d = parseDate(r[1]);
-        return !isNaN(d.getTime()) ? d.getFullYear() : null;
-      }).filter(Boolean)
-    )].sort();
-
-    const filter = document.getElementById("filter");
-    years.forEach(y => {
-      const option = document.createElement("option");
-      option.value = y;
-      option.textContent = y;
-      filter.appendChild(option);
+    
+    // ORDENAÇÃO DECRESCENTE (Mais recente primeiro)
+    timelineData.sort((a, b) => {
+      const dateA = parseDate(a[1]);
+      const dateB = parseDate(b[1]);
+      if (isNaN(dateA)) return 1;
+      if (isNaN(dateB)) return -1;
+      return dateB - dateA;
     });
+
+    renderTimeline(timelineData);
+    setupFilter();
   }
 });
 
+function renderTimeline(dataToRender) {
+  const container = document.getElementById("timeline-container");
+  container.innerHTML = ""; // Limpeza para evitar duplicação
+  
+  if (dataToRender.length === 0) {
+    container.innerHTML = "<p style='padding:20px; text-align:center'>Nenhum ato encontrado.</p>";
+    return;
+  }
+
+  dataToRender.forEach(row => {
+    container.appendChild(createTimelineItem(row));
+  });
+}
+
+function setupFilter() {
+  const years = [...new Set(
+    timelineData.map(r => {
+      let d = parseDate(r[1]);
+      return !isNaN(d.getTime()) ? d.getFullYear() : null;
+    }).filter(Boolean)
+  )];
+
+  // Ordena os anos do filtro também (Decrescente)
+  years.sort((a, b) => b - a);
+
+  const filter = document.getElementById("filter");
+  filter.innerHTML = '<option value="all">Todos os anos</option>'; 
+  
+  years.forEach(y => {
+    const option = document.createElement("option");
+    option.value = y;
+    option.textContent = y;
+    filter.appendChild(option);
+  });
+}
+
 document.getElementById("filter").addEventListener("change", (e) => {
   const year = e.target.value;
-  const container = document.getElementById("timeline-container");
-  container.innerHTML = "";
-  timelineData.forEach(row => {
+  const filteredData = timelineData.filter(row => {
+    if (year === "all") return true;
     let d = parseDate(row[1]);
     let rowYear = !isNaN(d.getTime()) ? d.getFullYear() : "desconhecido";
-    if (year === "all" || rowYear == year) {
-      container.appendChild(createTimelineItem(row));
-    }
+    return rowYear == year;
   });
+  renderTimeline(filteredData);
   document.getElementById("pdf-viewer").src = "";
 });
 </script>
